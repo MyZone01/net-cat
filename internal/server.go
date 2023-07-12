@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -14,6 +15,11 @@ var count = 0
 var clients = make(map[string]net.Conn)
 var leaving = make(chan message)
 var messages = make(chan message)
+
+type Client struct {
+	name    string
+	address net.Conn
+}
 
 type message struct {
 	text    string
@@ -36,62 +42,50 @@ func Server() {
 	}
 	defer listener.Close()
 
-	for len(clients) < 10 {
+	for len(clients) < 2 {
 
 		connection, err := listener.Accept()
 		if err != nil {
 			fmt.Println(err)
 			continue
 		} //else {
-		// connection.Write([]byte(greeting()))
+		connection.Write(greeting())
+		// name, _ := Client(&connection)
 		access, name := accessChat(connection)
 		if access {
 			go connectionHandler(connection, name)
 		}
-		// }
-
 	}
+	// }
+
 }
 
 func connectionHandler(connection net.Conn, name string) {
-	clients[connection.RemoteAddr().String()] = connection
+	// connection.Write([]byte("[ENTER YOUR NAME]: "))
 
-	messages <- newMessage("joined.", connection)
-
-	input := bufio.NewScanner(connection)
-	for input.Scan() {
-		messages <- newMessage(": "+input.Text(), connection)
-	}
-
-	delete(clients, connection.RemoteAddr().String())
-
-	leaving <- newMessage("has left.", connection)
-
-	connection.Close()
-	/*
-		for {
-			chatData, err := bufio.NewReader(connection).ReadString('\n')
-			if err != nil {
-				if err == io.EOF {
-					fmt.Println("Has LEFT !!!")
-					return
-				} else {
-					fmt.Println(err)
-					return
-				}
-			}
-			if strings.TrimSpace(string(chatData)) == "STOP" {
-				fmt.Print("Exiting Chat ... !")
+	for {
+		timing := timer()
+		infos := timing + name + ":" // + string(chatData)
+		// fmt.Print(infos)
+		connection.Write([]byte(infos))
+		// if strings.TrimSpace(s string)
+		chatData, err := bufio.NewReader(connection).ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				fmt.Println("Has LEFT !!!")
+				return
+			} else {
+				fmt.Println(err)
 				return
 			}
+		}
+		if strings.TrimSpace(string(chatData)) == "STOP" {
+			fmt.Print("Exiting Chat ... !")
+			return
+		}
 
-			// if strings.TrimSpace(s string)
-			}*/
+	}
 
-	timing := timer()
-	infos := timing + name + ":" // + string(chatData)
-	// fmt.Print(infos)
-	connection.Write([]byte(infos))
 }
 
 func newMessage(msg string, connection net.Conn) message {
@@ -100,6 +94,57 @@ func newMessage(msg string, connection net.Conn) message {
 		text:    address + msg,
 		address: address,
 	}
+}
+
+func accessChat(connect net.Conn) (bool, string) {
+	naming := ""
+	for naming == "" {
+		connect.Write([]byte("[ENTER YOUR NAME]: "))
+		nami, err := bufio.NewReader(connect).ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				leaveMessage(connect)
+				//fmt.Println("Has LEFT !!!")
+				return false, naming
+			} else {
+				fmt.Println(err)
+				return false, naming
+			}
+		}
+		nami = strings.TrimSuffix(nami, "\n")
+		naming = nami
+		if err != nil {
+			if err == io.EOF {
+				fmt.Println("Joining room cancel !!!")
+				// return
+			} else {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		}
+		// goodPseudo:
+		// connect.Write([]byte(greeting()))
+		// connect.Write([]byte("[ENTER YOUR NAME]:"))
+		// goto goodPseudo
+	}
+	name := "[" + naming + "]"
+	return true, name
+}
+
+func greeting() []byte {
+	file, err := os.ReadFile("assets/welcome.txt")
+	if err != nil {
+		fmt.Println("Argh Welcome Message Missing !!!")
+	}
+	return file
+}
+
+func timer() string {
+	t := time.Now()
+	formatted := fmt.Sprintf("[%d-%02d-%02d %02d:%02d:%02d]",
+		t.Year(), t.Month(), t.Day(),
+		t.Hour(), t.Minute(), t.Second())
+	return formatted
 }
 
 func messageBrodcast() {
@@ -120,46 +165,6 @@ func messageBrodcast() {
 	}
 }
 
-func accessChat(connect net.Conn) (bool, string) {
-	naming, err := bufio.NewReader(connect).ReadString('\n')
-	if err != nil {
-		if err == io.EOF {
-			fmt.Println("Has LEFT !!!")
-			os.Exit(0)
-		} else {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-goodPseudo:
-	connect.Write([]byte("[ENTER YOUR NAME]:"))
-	if len(naming) == 0 {
-		goto goodPseudo
-	}
-	return true, "[" + naming + "]"
-}
+func leaveMessage(connect net.Conn) {
 
-func greeting() string {
-	file, err := os.Open("assets/welcome.txt")
-	if err != nil {
-		fmt.Println("Argh Welcome Message Missing !!!")
-	}
-	defer file.Close()
-
-	greeting := bufio.NewScanner(file)
-
-	if err := greeting.Err(); err != nil {
-		fmt.Println("You3're Welcome !!!")
-	}
-	// for greeting.Scan() {
-	return greeting.Text()
-	// }
-}
-
-func timer() string {
-	t := time.Now()
-	formatted := fmt.Sprintf("[%d-%02d-%02d %02d:%02d:%02d]",
-		t.Year(), t.Month(), t.Day(),
-		t.Hour(), t.Minute(), t.Second())
-	return formatted
 }

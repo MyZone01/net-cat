@@ -1,0 +1,26 @@
+	// buffer := make([]byte, 1024)
+	// if _, err := connection.Read(buffer); err != nil {
+	// 	if err == io.EOF {
+	// 		log.Println(name, " has left !")
+	// 	}
+	// }
+
+	// connection.Write([]byte(greeting()))
+	// connection.Close()
+
+	/*clients[connection.RemoteAddr().String()] = connection
+
+	messages <- newMessage("joined.", connection)
+
+	input := bufio.NewScanner(connection)
+	for input.Scan() {
+		messages <- newMessage(": "+input.Text(), connection)
+	}
+
+	delete(clients, connection.RemoteAddr().String())
+
+	leaving <- newMessage("has left.", connection)
+
+	connection.Close()*/
+
+    

@@ -12,6 +12,6 @@ func main() {
 		fmt.Println("[USAGE]: ./TCPChat $port")
 	} else {
 		internal.Server()
-		internal.Client()
+		//internal.Client()
 	}
 }
