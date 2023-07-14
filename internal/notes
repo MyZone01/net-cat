@@ -23,4 +23,11 @@
 
 	connection.Close()*/
 
-    
+	// clean Up All things
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		cleanupAllTheThings()
+		os.Exit(0)
+	}()
