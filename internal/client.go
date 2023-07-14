@@ -18,9 +18,9 @@ func accessChat(connect net.Conn, connectAddr net.Addr, group *sync.Map) (bool, 
 
 	for name == "" || len(name) > 20 {
 		if count == 3 {
-			connect.Write([]byte("Please provide a non-empty name"))
+			connect.Write([]byte("Please provide a non-empty name\n"))
 		} else if count > 10 {
-			connect.Write([]byte("You're a funny One !"))
+			connect.Write([]byte("You're a funny One !\n"))
 		}
 		connect.Write([]byte("[ENTER YOUR NAME]: "))
 		count++
@@ -36,20 +36,17 @@ func accessChat(connect net.Conn, connectAddr net.Addr, group *sync.Map) (bool, 
 				return false, naming
 			}
 		}
+
 		name = strings.TrimSuffix(naming, "\n")
-		welcomeMessage(connect, group, name)
-		// name = "[" + name + "]"
-		group.Store(name, connect)
-		if err != nil {
-			if err == io.EOF {
-				fmt.Println("Joining room cancel !!!")
-				// return
-			} else {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+		if len(name) > 20 {
+			connect.Write([]byte("Please Choose a smaller pseudo name"))
 		}
 	}
+	// message := string(historyServing())
+	joinMessage(connect, group, name)
+	message := string(historyServing()) + label(name)
+	connect.Write([]byte(message))
+	// connect.Write([]byte(message))
 	return true, name
 }
 

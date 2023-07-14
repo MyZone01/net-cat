@@ -61,6 +61,7 @@ func Server() {
 		fmt.Println(name + " joined")
 		if access {
 			connectMap.Store(name, connection)
+			// connection.Write([]byte(label(name)))
 			// connMap[name] = connection
 			// fmt.Println(connectMap)
 			go connectionHandler(connection, name, connectMap)
@@ -76,11 +77,6 @@ func connectionHandler(connection net.Conn, name string, group *sync.Map) {
 
 	for {
 
-		timing := timer()
-		infos := timing + name + ":" // + string(chatData)
-		// fmt.Print(infos)
-		connection.Write([]byte(infos))
-		// if strings.TrimSpace(s string)
 		chatData, err := bufio.NewReader(connection).ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -98,25 +94,24 @@ func connectionHandler(connection net.Conn, name string, group *sync.Map) {
 
 		group.Range(func(key, value any) bool {
 			// messageBrodcast(connection, value.(net.Conn), message)
-			if value.(net.Conn) != connection {
-				// value.(net.Conn).Write([]byte(message))
-				// timing := timer()
-				// infos := timing + fmt.Sprintf("%s", key) + ":"
-				infos := "\r\033[K" + chatData + label(fmt.Sprintf("%s", key)) //timing + name + ":"
+			if value.(net.Conn) != connection && chatData != "\n" {
+				infos := "\n" + label(name) + chatData + label(fmt.Sprintf("%s", key))
 				value.(net.Conn).Write([]byte(infos))
+				// value.(net.Conn).Write([]byte("YayY"))
+				// } else {
 			}
 			return true
 		})
+		connection.Write([]byte(label(name)))
 
 		if strings.TrimSpace(string(chatData)) == "STOP" || strings.TrimSpace(string(chatData)) == "EXIT" {
 			fmt.Print(name + "Exiting Chat ... !")
-			connection.Write([]byte("You've successfully logout"))
-			group.Delete(name)
-			connection.Close()
+			connection.Write([]byte("You've successfully logout !"))
+			closeConnection(connection, group, name)
+			// group.Delete(name)
+			// connection.Close()
 		}
-
 	}
-
 }
 
 func messageBroadcast(group *sync.Map, connect net.Conn) {
@@ -136,6 +131,18 @@ func greeting() []byte {
 	file, err := os.ReadFile("assets/welcome.txt")
 	if err != nil {
 		fmt.Println("Argh Welcome Message Missing !!!")
+	}
+	return file
+}
+
+func historyServing() []byte {
+	file, err := os.ReadFile("data/history.txt")
+	if err != nil {
+		fmt.Println("Sorry chat history unavailable !")
+		return []byte("Sorry chat history unavailable !\n")
+	}
+	if file == nil {
+		return []byte("there is no chat history... \n")
 	}
 	return file
 }
@@ -160,19 +167,21 @@ func closeConnection(conn net.Conn, group *sync.Map, name string) {
 	group.Delete(name)
 	group.Range(func(key, value any) bool {
 		if key != name {
-			value.(net.Conn).Write([]byte(name + " has left our chat ... "))
+			value.(net.Conn).Write([]byte("\n" + name + " has left our chat... \n"))
+			value.(net.Conn).Write([]byte(label(fmt.Sprint(key))))
 		}
 		return true
 	})
 }
 
-func welcomeMessage(conn net.Conn, group *sync.Map, name string) {
+func joinMessage(conn net.Conn, group *sync.Map, name string) {
 	// conn.Close()
-	// group.Delete(name)
+	// "\r\033[K"
 	group.Range(func(key, value any) bool {
+		message := "\n" + name + " has joined our chat... " + "\n" + label(fmt.Sprint(key))
 		if key == name {
 		} else {
-			value.(net.Conn).Write([]byte("\r\033[K" + name + " has joined our chat ... "))
+			value.(net.Conn).Write([]byte(message))
 		}
 		return true
 	})
