@@ -12,26 +12,14 @@ import (
 	"time"
 )
 
-var MAX_CONNECTION = 10
-var INFOS = ""
-
-// var count = 0
-// var clients = make(map[string]net.Conn)
-// var leaving = make(chan message)
-// var messages = make(chan message)
-
-// type Client struct {
-// 	name    string
-// 	address net.Conn
-// }
-
-// type message struct {
-// 	name    string
-// 	text    string
-// 	address string
-// }
+var (
+	MAX_CLIENTS   = 10
+	INFOS         = ""
+	CLIENTS_COUNT = 0
+)
 
 func Server() {
+
 	PORT := ":"
 	if len(os.Args) == 1 {
 		PORT += "8989"
