@@ -1,22 +1,24 @@
 package internal
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
-	"strings"
 	"sync"
 	"time"
 )
 
 var (
-	MAX_CLIENTS   = 10
-	INFOS         = ""
-	CLIENTS_COUNT = 0
+	MAX_CLIENTS = 2
+	INFOS       = ""
+	HISTORY     = "data/"
 )
+
+type CLIENTS struct {
+	history string
+	group   sync.Map
+}
 
 func Server() {
 
@@ -35,19 +37,27 @@ func Server() {
 	}
 	defer listener.Close()
 
-	err = os.Remove("data/history.txt")
+	err = os.RemoveAll("data")
+	// err = os.Remove("data")
 	if err != nil {
-		fmt.Println("No Previous chat history !")
+		fmt.Println(err)
 	}
 
-	err = os.WriteFile("data/history.txt", []byte(""), 0666)
-	if err != nil {
-		fmt.Println("Error creating chat history ...", err)
+	if err = os.Mkdir("data", os.ModePerm); err != nil {
+		log.Fatal(err)
 	}
+	fmt.Println("chatLogs directory successfully initialized !")
+
 	fmt.Println("Server Ready on: ", PORT)
 
-	var connectMap = &sync.Map{}
+addGroup:
+
 	// var connMap map[string]net.Conn
+	// HISTORY = "data/history" +
+	var groupie CLIENTS
+	var connectMap = &sync.Map{}
+
+	groupie.history = handlingLogs()
 
 	for {
 		connection, err := listener.Accept()
@@ -55,67 +65,37 @@ func Server() {
 		if err != nil {
 			fmt.Println(err)
 			continue
-		} //else {
+		}
 		connection.Write(greeting())
+
 		// name, _ := Client(&connection)
-		access, name := accessChat(connection, connectionAddr, connectMap)
+		access, name := accessChat(connection, connectionAddr, connectMap, groupie.history)
 		fmt.Println(name + " joined")
 		if access {
+			groupie.group = *connectMap
 			connectMap.Store(name, connection)
 			// connection.Write([]byte(label(name)))
 			// connMap[name] = connection
 			// fmt.Println(connectMap)
-			go connectionHandler(connection, name, connectMap)
+			go connectionHandler(connection, name, connectMap, groupie.history)
+		}
+		if checkGroup(connectMap) {
+			goto addGroup
 		}
 	}
-	// }
 
 }
 
-func connectionHandler(connection net.Conn, name string, group *sync.Map) {
-
-	// defer closeConnection(connection, group)
-
-	for {
-		if INFOS != "" {
-			logHistory(INFOS)
-			INFOS = ""
-		}
-		chatData, err := bufio.NewReader(connection).ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				// fmt.Println(name + "Has LEFT !!!")
-				closeConnection(connection, group, name)
-				group.Delete(name)
-				return
-			} else {
-				fmt.Println(err)
-				return
-			}
-		}
-
-		message := label(name) + chatData
-		logHistory(message)
-
-		group.Range(func(key, value any) bool {
-			// messageBrodcast(connection, value.(net.Conn), message)
-			if value.(net.Conn) != connection && chatData != "\n" {
-				infos := "\n" + label(name) + chatData + label(fmt.Sprintf("%s", key))
-				value.(net.Conn).Write([]byte(infos))
-				// value.(net.Conn).Write([]byte("YayY"))
-				// } else {
-			}
-			return true
-		})
-		connection.Write([]byte(label(name)))
-
-		if strings.TrimSpace(string(chatData)) == "STOP" || strings.TrimSpace(string(chatData)) == "EXIT" {
-			fmt.Print(name + "Exiting Chat ... !")
-			connection.Write([]byte("You've successfully logout !"))
-			closeConnection(connection, group, name)
-			// group.Delete(name)
-			// connection.Close()
-		}
+func checkGroup(group *sync.Map) bool {
+	count := 0
+	group.Range(func(key, value any) bool {
+		count++
+		return true
+	})
+	if count == MAX_CLIENTS {
+		return true
+	} else {
+		return false
 	}
 }
 
@@ -140,8 +120,8 @@ func greeting() []byte {
 	return file
 }
 
-func historyServing() []byte {
-	file, err := os.ReadFile("data/history.txt")
+func historyServing(history string) []byte {
+	file, err := os.ReadFile(history)
 	if err != nil {
 		fmt.Println("Sorry chat history unavailable !")
 		return []byte("Sorry chat history unavailable !\n")
@@ -171,7 +151,7 @@ func closeConnection(conn net.Conn, group *sync.Map, name string) {
 	conn.Close()
 	group.Delete(name)
 	message := name + " has left our chat... \n"
-	err := os.WriteFile("/data/hitory.txt", []byte(message), 0666)
+	err := os.WriteFile(HISTORY, []byte(message), 0666)
 	if err != nil {
 		fmt.Println("Error logging chat history ...", err)
 	}
@@ -192,18 +172,21 @@ func joinMessage(conn net.Conn, group *sync.Map, name string) {
 	// err := os.WriteFile("/data/hitory.txt", []byte(message), 0666)
 	// if err != nil {
 	// }
-	group.Range(func(key, value any) bool {
+	// var container map[string]struct{}
+	// container = map[string]struct{}{}
+	group.Range(func(key, value interface{}) bool {
 		message = "\n" + message + "\n" + label(fmt.Sprint(key))
 		if key == name {
 		} else {
-			value.(net.Conn).Write([]byte(message))
+			connect := value.(net.Conn)
+			connect.Write([]byte(message))
 		}
 		return true
 	})
 }
 
-func logHistory(message string) {
-	file, err := os.OpenFile("data/history.txt", os.O_APPEND|os.O_WRONLY, 0644)
+func logHistory(message string, history string) {
+	file, err := os.OpenFile(history, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("Error with chat history file !", err)
 		log.Println(err)
@@ -213,6 +196,17 @@ func logHistory(message string) {
 		fmt.Println("Error logging chat history !", err)
 		// log.Fatal(err)
 	}
+}
+
+func handlingLogs() string {
+
+	moment := time.Now()
+	HISTORY += moment.String()
+	err := os.WriteFile(HISTORY, []byte(""), 0666)
+	if err != nil {
+		fmt.Println("Error creating chat history ...", err)
+	}
+	return HISTORY
 }
 
 // fmt.Println(*group)
