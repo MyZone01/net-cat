@@ -13,6 +13,7 @@ var (
 	MAX_CLIENTS = 2
 	INFOS       = ""
 	HISTORY     = "data/"
+	NETWORK     []CLIENTS
 )
 
 type CLIENTS struct {
@@ -55,13 +56,17 @@ addGroup:
 	// var connMap map[string]net.Conn
 	// HISTORY = "data/history" +
 	var groupie CLIENTS
+	NETWORK = append(NETWORK, groupie)
 	var connectMap = &sync.Map{}
 
 	groupie.history = handlingLogs()
 
 	for {
-		if checkGroup(connectMap) {
+		group, right := chooseChat(NETWORK)
+		if !right {
 			goto addGroup
+		} else {
+			groupie = group
 		}
 		connection, err := listener.Accept()
 		connectionAddr := listener.Addr()
@@ -85,6 +90,18 @@ addGroup:
 
 	}
 
+}
+
+func chooseChat(rooms []CLIENTS) (CLIENTS, bool) {
+	empty := CLIENTS{}
+	for _, chat := range rooms {
+		if !checkGroup(&chat.group) {
+			return chat, true
+		} else {
+			continue
+		}
+	}
+	return empty, false
 }
 
 func checkGroup(group *sync.Map) bool {
