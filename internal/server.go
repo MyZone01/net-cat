@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	MAX_CLIENTS = 2
+	MAX_CLIENTS = 10
 	INFOS       = ""
 	HISTORY     = "data/"
 )
@@ -147,14 +147,16 @@ func timer() string {
 	return formatted
 }
 
-func closeConnection(conn net.Conn, group *sync.Map, name string) {
+func closeConnection(conn net.Conn, group *sync.Map, name string, history string) {
 	conn.Close()
 	group.Delete(name)
-	message := name + " has left our chat... \n"
-	err := os.WriteFile(HISTORY, []byte(message), 0666)
-	if err != nil {
-		fmt.Println("Error logging chat history ...", err)
-	}
+	// message := name + " has left our chat... \n"
+	// logHistory(message, history)
+	// logHistory(message, history)
+	// err := os.WriteFile(HISTORY, []byte(message), 0666)
+	// if err != nil {
+	// 	fmt.Println("Error logging chat history ...", err)
+	// }
 	group.Range(func(key, value any) bool {
 		if key != name {
 			value.(net.Conn).Write([]byte("\n" + name + " has left our chat... \n"))
@@ -168,18 +170,18 @@ func joinMessage(conn net.Conn, group *sync.Map, name string) {
 
 	// "\r\033[K"
 	message := name + " has joined our chat... "
-	INFOS = message + "\n"
+	// INFOS += message + "\n"
 	// err := os.WriteFile("/data/hitory.txt", []byte(message), 0666)
 	// if err != nil {
 	// }
 	// var container map[string]struct{}
 	// container = map[string]struct{}{}
 	group.Range(func(key, value interface{}) bool {
-		message = "\n" + message + "\n" + label(fmt.Sprint(key))
+		msg := "\n" + message + "\n" + label(fmt.Sprint(key))
 		if key == name {
 		} else {
 			connect := value.(net.Conn)
-			connect.Write([]byte(message))
+			connect.Write([]byte(msg))
 		}
 		return true
 	})
@@ -199,9 +201,8 @@ func logHistory(message string, history string) {
 }
 
 func handlingLogs() string {
-
 	moment := time.Now()
-	HISTORY += moment.String()
+	HISTORY += moment.String() + ".txt"
 	err := os.WriteFile(HISTORY, []byte(""), 0666)
 	if err != nil {
 		fmt.Println("Error creating chat history ...", err)

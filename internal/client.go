@@ -55,15 +55,11 @@ func connectionHandler(connection net.Conn, name string, group *sync.Map, histor
 	// defer closeConnection(connection, group)
 
 	for {
-		if INFOS != "" {
-			logHistory(INFOS, history)
-			INFOS = ""
-		}
 		chatData, err := bufio.NewReader(connection).ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
 				// fmt.Println(name + "Has LEFT !!!")
-				closeConnection(connection, group, name)
+				closeConnection(connection, group, name, history)
 				group.Delete(name)
 				return
 			} else {
@@ -71,8 +67,13 @@ func connectionHandler(connection net.Conn, name string, group *sync.Map, histor
 				return
 			}
 		}
+		// if INFOS != "" {
+		// 	logHistory(INFOS, history)
+		// 	INFOS = ""
+		// }
 
 		message := label(name) + chatData
+
 		logHistory(message, history)
 
 		// var point CLIENTS
@@ -98,7 +99,7 @@ func connectionHandler(connection net.Conn, name string, group *sync.Map, histor
 		if strings.TrimSpace(string(chatData)) == "STOP" || strings.TrimSpace(string(chatData)) == "EXIT" {
 			fmt.Print(name + "Exiting Chat ... !")
 			connection.Write([]byte("You've successfully logout !"))
-			closeConnection(connection, group, name)
+			closeConnection(connection, group, name, history)
 			// group.Delete(name)
 			// connection.Close()
 		}
