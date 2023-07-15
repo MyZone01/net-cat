@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	MAX_CLIENTS = 10
+	MAX_CLIENTS = 2
 	INFOS       = ""
 	HISTORY     = "data/"
 )
@@ -60,6 +60,9 @@ addGroup:
 	groupie.history = handlingLogs()
 
 	for {
+		if checkGroup(connectMap) {
+			goto addGroup
+		}
 		connection, err := listener.Accept()
 		connectionAddr := listener.Addr()
 		if err != nil {
@@ -70,7 +73,7 @@ addGroup:
 
 		// name, _ := Client(&connection)
 		access, name := accessChat(connection, connectionAddr, connectMap, groupie.history)
-		fmt.Println(name + " joined")
+		// fmt.Println(name + " joined")
 		if access {
 			groupie.group = *connectMap
 			connectMap.Store(name, connection)
@@ -79,9 +82,7 @@ addGroup:
 			// fmt.Println(connectMap)
 			go connectionHandler(connection, name, connectMap, groupie.history)
 		}
-		if checkGroup(connectMap) {
-			goto addGroup
-		}
+
 	}
 
 }
@@ -209,32 +210,3 @@ func handlingLogs() string {
 	}
 	return HISTORY
 }
-
-// fmt.Println(*group)
-// if key == name {
-// 	return true
-// } else {
-// 	Write([]byte(message))
-// return true
-
-// })
-// for {
-// 	select {
-// 	case msg := <-messages:
-// 		for _, connect := range clients {
-// 			if msg.address == connect.RemoteAddr().String() {
-// 				continue
-// 			}
-// 			fmt.Fprintln(connect, msg.text)
-// 		}
-// 	case msg := <-leaving:
-// 		for _, connect := range clients {
-// 			fmt.Fprintln(connect, msg.text)
-// 		}
-// 	}
-// }
-// }
-
-/*func leaveMessage(connect net.Conn, key, value interface{}, name string) {
-
-}*/
