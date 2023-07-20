@@ -138,8 +138,10 @@ func chat(user net.Conn) {
 				users[name].Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
 			} else if text == ">list_user" {
 				listUsers(user)
+				user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
 			} else if text == ">clear" {
 				clearScreen(user)
+				user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
 			} else {
 				message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + text + "\n"
 				mutex.Lock()
