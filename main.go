@@ -2,22 +2,55 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
 )
 
 var (
-	users    = map[string]net.Conn{}
-	messages string
-	mutex    sync.Mutex
-	logFile  *os.File
+	users          = map[string]net.Conn{}
+	messages       string
+	mutex          sync.Mutex
+	logFile        *os.File
+	maxConnections = 10
+	maxLines       int
+	lineCount      int
+	emojiMap       = map[string]string{
+		":)":  "\U0001F642", // slightly_smiling_face
+		":(":  "\U0001F641", // slightly_frowning_face
+		";)":  "\U0001F609", // wink
+		"<3":  "\U0001F496", // red heart // yellow heart
+		":D":  "\U0001F600", // grinning face
+		":P":  "\U0001F61B", // face with tongue
+		":O":  "\U0001F62E", // face with open mouth
+		":'(": "\U0001F622", // crying face
+		":/":  "\U0001F615", // confused face
+		":*":  "\U0001F618", // face throwing a kiss
+		";(":  "\U0001F622", // crying face
+	}
 )
 
+func replaceEmojis(text string) string {
+	for k, v := range emojiMap {
+		text = strings.Replace(text, k, v, -1)
+	}
+	return text
+}
+
 func broadcast(message, name string) {
+	// before writing to the log file, check if it exceeds the max line count
+	if lineCount < maxLines {
+		lineCount++
+		_, err := logFile.WriteString(message)
+		if err != nil {
+			fmt.Println("❌ [ERROR]: Cannot write on file " + err.Error())
+		}
+	}
 	for i := range users {
 		if i != name {
 			users[i].Write([]byte("\r\033[K" + message))
@@ -27,8 +60,24 @@ func broadcast(message, name string) {
 	messages += message
 }
 
+func clearScreen(conn net.Conn) {
+	// This clear command depends on the operating system
+	// Here we're using a command that works in Unix systems (like Linux and MacOS)
+	cmd := exec.Command("clear")
+	cmd.Stdout = conn
+	cmd.Run()
+}
+
+func listUsers(conn net.Conn) {
+	userList := "Users in chat:\n"
+	for username := range users {
+		userList += "- " + username + "\n"
+	}
+	conn.Write([]byte(userList))
+}
+
 func chat(user net.Conn) {
-	if len(users) == 10 {
+	if len(users) >= maxConnections {
 		user.Write([]byte("🔒 Sorry chat is full. Try again later\n"))
 		user.Close()
 		return
@@ -63,23 +112,39 @@ func chat(user net.Conn) {
 		if !ok {
 			break
 		}
-		text := scanner.Text()
+		text := replaceEmojis(scanner.Text())
 		if len(strings.Trim(text, " \n\t\r")) != 0 {
-			if strings.HasPrefix(text, "@") {
+			if strings.HasPrefix(text, ">rename ") {
+				newName := strings.TrimSpace(text[8:])
+				if newName == "" {
+					user.Write([]byte("❌ Invalid name.\n"))
+					user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
+				} else if _, ok := users[newName]; ok {
+					user.Write([]byte("❌ Name is already in use.\n"))
+					user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
+				} else {
+					delete(users, name)
+					prevName := name
+					name = newName
+					users[name] = user
+					user.Write([]byte("✅ Name changed successfully.\n"))
+					broadcast(fmt.Sprintf("🗣️  %s has change his name to %s ...\n", prevName, name), name)
+				}
+			} else if strings.HasPrefix(text, "@") {
 				_text := strings.Split(text, " ")
 				private := string(_text[0][1:])
 				message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + strings.Join(_text[1:], " ") + "\n"
 				users[private].Write([]byte("\r\033[K" + message + fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), private)))
 				users[name].Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
+			} else if text == ">list_user" {
+				listUsers(user)
+			} else if text == ">clear" {
+				clearScreen(user)
 			} else {
 				message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + text + "\n"
 				mutex.Lock()
 				broadcast(message, name)
-				_, err := logFile.WriteString(message)
 				mutex.Unlock()
-				if err != nil {
-					fmt.Println("❌ [ERROR]: Cannot write on file " + err.Error())
-				}
 			}
 		}
 	}
@@ -89,6 +154,9 @@ func chat(user net.Conn) {
 
 func main() {
 	args := os.Args[1:]
+	flag.IntVar(&maxConnections, "m", 10, "Maximum number of concurrent connections allowed")
+	flag.IntVar(&maxLines, "l", 10000, "the max line of the log file allowed")
+	flag.Parse()
 	if len(args) > 1 {
 		fmt.Println("❌ [USAGE]: ./TCPChat $port")
 	} else {
