@@ -6,6 +6,7 @@ import (
 	"net"
 	netcat "netcat/lib"
 	"os"
+	"time"
 )
 
 func main() {
@@ -25,7 +26,10 @@ func main() {
 			fmt.Println("Failed to launch server: ", err)
 		}
 		fmt.Printf("🚀 Server listening on the port :%s\n", port)
-		netcat.LogFile, err = os.Create("log/chat.log")
+
+		timestamp := time.Now()
+		fileName := fmt.Sprintf("logs/chat-log-%s.log", timestamp)
+		netcat.LogFile, err = os.Create(fileName)
 		if err != nil {
 			fmt.Println("Failed to create log file: ", err)
 		}

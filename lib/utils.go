@@ -38,6 +38,7 @@ var (
 // Parameters:
 //   - message: The message to be broadcasted to the users.
 //   - name: The name of the user who sent the message, used to exclude them from receiving the message.
+//
 // Goals:
 //   - Send the message to all connected users.
 //   - Log the message to the LogFile if the lineCount is less than MaxLines.
@@ -82,6 +83,7 @@ func listUsers(conn net.Conn) {
 // replaceEmojis replaces emoji shortcuts in the given text with their corresponding emoji characters.
 // Parameters:
 //   - text: A string containing text with emoji shortcuts to be replaced.
+//
 // Returns:
 //   - A string with emoji shortcuts replaced by their corresponding emoji characters.
 func replaceEmojis(text string) string {
@@ -90,4 +92,3 @@ func replaceEmojis(text string) string {
 	}
 	return text
 }
-

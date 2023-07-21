@@ -1,1 +1,2 @@
-log/chat.log
+logs/chat-log-*.log
+netcat
