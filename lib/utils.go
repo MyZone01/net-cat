@@ -40,10 +40,12 @@ var (
 // Goals:
 //   - Send the message to all connected users.
 //   - Log the message to the LogFile if the lineCount is less than MaxLines.
-func broadcast(message, name string) {
-	_, err := LogFile.WriteString(message)
-	if err != nil {
-		fmt.Println("❌ [ERROR]: Cannot write on file " + err.Error())
+func broadcast(message, name string, mustLog bool) {
+	if mustLog {
+		_, err := LogFile.WriteString(message)
+		if err != nil {
+			fmt.Println("❌ [ERROR]: Cannot write on file " + err.Error())
+		}
 	}
 	for i := range users {
 		if i != name {
@@ -51,7 +53,9 @@ func broadcast(message, name string) {
 		}
 		users[i].Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), i)))
 	}
-	messages += message
+	if mustLog {
+		messages += message
+	}
 }
 
 // clearScreen clears the terminal screen for the given connection.

@@ -55,7 +55,7 @@ func Chat(user net.Conn) {
 
 	if name != "" {
 		user.Write([]byte(messages))
-		broadcast(fmt.Sprintf("🤝 %s has joined our chat ...\n", name), name)
+		broadcast(fmt.Sprintf("🤝 %s has joined our chat ...\n", name), name, false)
 		for {
 			ok := scanner.Scan()
 			if !ok {
@@ -77,7 +77,7 @@ func Chat(user net.Conn) {
 						name = newName
 						users[name] = user
 						user.Write([]byte("✅ Name changed successfully.\n"))
-						broadcast(fmt.Sprintf("🗣️  %s has change his name to %s ...\n", prevName, name), name)
+						broadcast(fmt.Sprintf("🗣️  %s has change his name to %s ...\n", prevName, name), name, false)
 					}
 				} else if strings.HasPrefix(text, "@") {
 					_text := strings.Split(text, " ")
@@ -94,12 +94,12 @@ func Chat(user net.Conn) {
 				} else {
 					message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + text + "\n"
 					mutex.Lock()
-					broadcast(message, name)
+					broadcast(message, name, true)
 					mutex.Unlock()
 				}
 			}
 		}
-		broadcast(fmt.Sprintf("👋 %s has left our chat ...\n", name), name)
+		broadcast(fmt.Sprintf("👋 %s has left our chat ...\n", name), name, false)
 		delete(users, name)
 	}
 }
