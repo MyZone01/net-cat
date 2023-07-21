@@ -1,28 +1,37 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net"
 	netcat "netcat/lib"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
 func main() {
 	args := os.Args[1:]
-	flag.IntVar(&netcat.MaxConnections, "m", 10, "Maximum number of concurrent connections allowed")
-	flag.Parse()
-	if len(args) > 1 {
+	if len(args) > 2 || (len(args) == 2 && !strings.HasPrefix(args[1], "-m=")) {
 		fmt.Println("❌ [USAGE]: ./TCPChat $port")
+		return
 	} else {
+		if len(args) == 2 {
+			_maxConnection, err := strconv.Atoi(args[1][3:])
+			if err != nil {
+				fmt.Println("❌ [USAGE]: ./TCPChat $port -m=flag")
+				return
+			}
+			netcat.MaxConnections = _maxConnection
+		}
 		port := "8989"
 		if len(args) != 0 {
 			port = args[0]
 		}
 		listener, err := net.Listen("tcp", ":"+port)
 		if err != nil {
-			fmt.Println("Failed to launch server: ", err)
+			fmt.Println("❌ Failed to launch server: ", err)
+			return
 		}
 		fmt.Printf("🚀 Server listening on the port :%s\n", port)
 
@@ -30,10 +39,15 @@ func main() {
 		fileName := fmt.Sprintf("logs/chat-log-%s.log", timestamp)
 		netcat.LogFile, err = os.Create(fileName)
 		if err != nil {
-			fmt.Println("Failed to create log file: ", err)
+			fmt.Println("❌ Failed to create log file: ", err)
+			return
 		}
 		for {
-			connection, _ := listener.Accept()
+			connection, err := listener.Accept()
+			if err != nil {
+				fmt.Println("❌ Can not connect to the server: ", err)
+				return
+			}
 			go netcat.Chat(connection)
 		}
 	}
