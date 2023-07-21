@@ -12,7 +12,6 @@ import (
 func main() {
 	args := os.Args[1:]
 	flag.IntVar(&netcat.MaxConnections, "m", 10, "Maximum number of concurrent connections allowed")
-	flag.IntVar(&netcat.MaxLines, "l", 10000, "the max line of the log file allowed")
 	flag.Parse()
 	if len(args) > 1 {
 		fmt.Println("❌ [USAGE]: ./TCPChat $port")

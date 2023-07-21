@@ -16,8 +16,6 @@ var (
 	mutex          sync.Mutex
 	LogFile        *os.File
 	MaxConnections = 10
-	MaxLines       int
-	lineCount      int
 	emojiMap       = map[string]string{
 		":)":  "\U0001F642", // slightly_smiling_face
 		":(":  "\U0001F641", // slightly_frowning_face
@@ -43,12 +41,9 @@ var (
 //   - Send the message to all connected users.
 //   - Log the message to the LogFile if the lineCount is less than MaxLines.
 func broadcast(message, name string) {
-	if lineCount < MaxLines {
-		lineCount++
-		_, err := LogFile.WriteString(message)
-		if err != nil {
-			fmt.Println("❌ [ERROR]: Cannot write on file " + err.Error())
-		}
+	_, err := LogFile.WriteString(message)
+	if err != nil {
+		fmt.Println("❌ [ERROR]: Cannot write on file " + err.Error())
 	}
 	for i := range users {
 		if i != name {

@@ -15,14 +15,15 @@ import (
 // Once the user is added to the chat, they can participate in the conversation.
 //
 // Parameters:
-//   user (net.Conn): The network connection representing the user.
+//
+//	user (net.Conn): The network connection representing the user.
 //
 // Goals:
-//   1. Handle user registration and name validation.
-//   2. Manage user interactions in the chat, such as sending messages and commands.
-//   3. Handle special commands like renaming, private messages, listing users, and clearing the screen.
-//   4. Broadcast messages to all other users in the chat.
-//   5. Handle user disconnection and remove them from the chat.
+//  1. Handle user registration and name validation.
+//  2. Manage user interactions in the chat, such as sending messages and commands.
+//  3. Handle special commands like renaming, private messages, listing users, and clearing the screen.
+//  4. Broadcast messages to all other users in the chat.
+//  5. Handle user disconnection and remove them from the chat.
 func Chat(user net.Conn) {
 	if len(users) >= MaxConnections {
 		user.Write([]byte("🔒 Sorry chat is full. Try again later\n"))
@@ -52,51 +53,53 @@ func Chat(user net.Conn) {
 		}
 	}
 
-	user.Write([]byte(messages))
-	broadcast(fmt.Sprintf("🤝 %s has joined our chat ...\n", name), name)
-	for {
-		ok := scanner.Scan()
-		if !ok {
-			break
-		}
-		text := replaceEmojis(scanner.Text())
-		if len(strings.Trim(text, " \n\t\r")) != 0 {
-			if strings.HasPrefix(text, ">rename ") {
-				newName := strings.TrimSpace(text[8:])
-				if newName == "" {
-					user.Write([]byte("❌ Invalid name.\n"))
+	if name != "" {
+		user.Write([]byte(messages))
+		broadcast(fmt.Sprintf("🤝 %s has joined our chat ...\n", name), name)
+		for {
+			ok := scanner.Scan()
+			if !ok {
+				break
+			}
+			text := replaceEmojis(scanner.Text())
+			if len(strings.Trim(text, " \n\t\r")) != 0 {
+				if strings.HasPrefix(text, ">rename ") {
+					newName := strings.TrimSpace(text[8:])
+					if newName == "" {
+						user.Write([]byte("❌ Invalid name.\n"))
+						user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
+					} else if _, ok := users[newName]; ok {
+						user.Write([]byte("❌ Name is already in use.\n"))
+						user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
+					} else {
+						delete(users, name)
+						prevName := name
+						name = newName
+						users[name] = user
+						user.Write([]byte("✅ Name changed successfully.\n"))
+						broadcast(fmt.Sprintf("🗣️  %s has change his name to %s ...\n", prevName, name), name)
+					}
+				} else if strings.HasPrefix(text, "@") {
+					_text := strings.Split(text, " ")
+					private := string(_text[0][1:])
+					message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + strings.Join(_text[1:], " ") + "\n"
+					users[private].Write([]byte("\r\033[K" + message + fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), private)))
+					users[name].Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
+				} else if text == ">list_user" {
+					listUsers(user)
 					user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
-				} else if _, ok := users[newName]; ok {
-					user.Write([]byte("❌ Name is already in use.\n"))
+				} else if text == ">clear" {
+					clearScreen(user)
 					user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
 				} else {
-					delete(users, name)
-					prevName := name
-					name = newName
-					users[name] = user
-					user.Write([]byte("✅ Name changed successfully.\n"))
-					broadcast(fmt.Sprintf("🗣️  %s has change his name to %s ...\n", prevName, name), name)
+					message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + text + "\n"
+					mutex.Lock()
+					broadcast(message, name)
+					mutex.Unlock()
 				}
-			} else if strings.HasPrefix(text, "@") {
-				_text := strings.Split(text, " ")
-				private := string(_text[0][1:])
-				message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + strings.Join(_text[1:], " ") + "\n"
-				users[private].Write([]byte("\r\033[K" + message + fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), private)))
-				users[name].Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
-			} else if text == ">list_user" {
-				listUsers(user)
-				user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
-			} else if text == ">clear" {
-				clearScreen(user)
-				user.Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
-			} else {
-				message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + text + "\n"
-				mutex.Lock()
-				broadcast(message, name)
-				mutex.Unlock()
 			}
 		}
+		broadcast(fmt.Sprintf("👋 %s has left our chat ...\n", name), name)
+		delete(users, name)
 	}
-	broadcast(fmt.Sprintf("👋 %s has left our chat ...\n", name), name)
-	delete(users, name)
 }
