@@ -18,38 +18,64 @@ The TCPChat project can serve as a foundation for building more advanced chat ap
 We hope you find this project useful and enjoy exploring the world of TCP-based chat applications with TCPChat!
 
 ## USAGE
-* From the same computer:
-1. Type the command into a new terminal (client's) to start:
-```
-$ nc localhost <port>
-```
-2. When connection is received, a linux logo would appear and ask for client's name
-3. Enter your name and start typing!
-4. For more than 1 client, open new terminals (maximum 10 connections), then use the same command and port to join the chat.
-5. Start chatting!
 
-##	OBSERVE
-To observe TCP packet exchange while the program is running, you can use network monitoring tools. Here are a few options:
+1. Download or clone the repository to your local machine.
 
-1. Wireshark: Wireshark is a popular network protocol analyzer that allows you to capture and inspect network packets. It supports various protocols, including TCP. You can run Wireshark on your machine and select the network interface through which the TCP packets are being exchanged. Wireshark will capture and display the packets, allowing you to analyze their content and observe the TCP packet exchange in real-time.
+2. Navigate to the project directory.
 
-2. tcpdump: tcpdump is a command-line packet analyzer for capturing network traffic. It allows you to capture packets on a specific network interface and save them to a file for later analysis. You can run tcpdump in a separate terminal window while your program is running, specifying the network interface and filtering for TCP traffic. For example, the following command captures TCP packets on the "eth0" interface and saves them to a file called "packets.pcap":
-
+3. Build the server executable using the following command:
    ```
-   tcpdump -i eth0 -w packets.pcap tcp
+   go build .
    ```
 
-   You can then open the "packets.pcap" file using Wireshark or another packet analyzer to inspect the captured TCP packets.
-
-3. Netcat: If you want to observe the TCP packet exchange specifically for the program you mentioned earlier, you can use Netcat (nc) to create a listener on a specific port and redirect the program's output to that port. For example, if your program is running on port 8989, you can use the following command:
-
+4. Run the server using the following command:
    ```
-   nc -l 8989
+   ./netcat
    ```
 
-   This will start a Netcat listener on port 8989, and any TCP packets sent by the program will be displayed in the terminal.
+5. The server will start listening for incoming connections on the default port 8989. If you want to use a different port, you can specify it as a command-line argument:
+   ```
+   ./netcat 8080
+   ```
 
-These tools allow you to monitor the TCP packet exchange between your program and other network entities. They provide valuable insights into the network communication and can help you debug and analyze network-related issues.
+6. Clients can connect to the server using Netcat client. For example, using Telnet:
+   ```
+   nc localhost 8989
+   ```
+
+7. Once connected, clients can start sending and receiving messages. Type your name to join the chat room.
+
+## AVAILABLE COMMANDS
+
+1. To clear the screen:
+   ```
+   /clear
+   ```
+
+2. To list all connected users:
+   ```
+   /list
+   ```
+
+3. To send a private message to a specific user:
+   ```
+   @username Your message here
+   ```
+
+4. To exit the chat:
+   ```
+   /exit
+   ```
+
+## NOTE
+
+- The chat server has a maximum limit of 10 users. If the server is full, new connections will be rejected.
+
+- The server logs all chat messages to a log file named "chat.log" in the "log" directory.
+
+- Emoji shortcuts in messages will be automatically replaced with their corresponding emoji characters.
+
+- Please ensure that you have Telnet or Netcat installed on your machine to connect to the server from the command line.
 
 ##  AUTHOR
 +   Cheikh Ahmadou Tidiane Diallo
