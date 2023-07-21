@@ -82,8 +82,13 @@ func Chat(user net.Conn) {
 				} else if strings.HasPrefix(text, "@") {
 					_text := strings.Split(text, " ")
 					private := string(_text[0][1:])
-					message = fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + strings.Join(_text[1:], " ") + "\n"
-					users[private].Write([]byte("\r\033[K" + message + fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), private)))
+					message = fmt.Sprintf("@[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name) + strings.Join(_text[1:], " ") + "\n"
+					_user, err := users[private]
+					if !err {
+						user.Write([]byte("❌ User not exit.\n"))
+					} else {
+						_user.Write([]byte("\r\033[K" + message + fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), private)))
+					}
 					users[name].Write([]byte(fmt.Sprintf("[%s][%s]:", time.Now().Format("2006-01-02 15:04:05"), name)))
 				} else if text == ">list_user" {
 					listUsers(user)
